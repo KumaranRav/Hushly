@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Encryption Tool</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Poppins', sans-serif;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .top-bar {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .top-bar button {
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .top-bar button:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.1);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            animation: fadeScaleIn 0.5s ease-out;
+        }
+
+        @keyframes fadeScaleIn {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .welcome-container {
+            background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+            color: white;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .welcome-message {
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 1.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        input, button, textarea {
+            width: 100%;
+            margin: 12px 0;
+            padding: 14px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            transition: all 0.3s;
+        }
+
+        button {
+            background: #8e24aa;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #6a1b9a;
+            transform: translateY(-2px);
+        }
+
+        .hidden { display: none; }
+
+        .password-container {
+            position: relative;
+        }
+
+        .password-container button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #8e24aa;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .dark-mode {
+            background: #121212;
+            color: #ffffff;
+        }
+
+        .dark-mode .container {
+            background: rgba(30, 30, 30, 0.9);
+        }
+
+        .dark-mode input, .dark-mode textarea {
+            background: #2d2d2d;
+            color: #ffffff;
+            border-color: #444;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+
+    <canvas id="snowCanvas"></canvas>
+
+    <div class="top-bar hidden" id="topNav">
+        <button onclick="toggleDarkMode()">🌙</button>
+        <button onclick="logout()">🔒</button>
+    </div>
+
+    <div id="signup" class="container">
+        <h2>Sign Up</h2>
+        <input type="text" id="newUsername" placeholder="Create Username">
+        <div class="password-container">
+            <input type="password" id="newPassword" placeholder="Create Password">
+            <button onclick="togglePasswordVisibility('newPassword')">👁</button>
+        </div>
+        <button onclick="createAccount()">Sign Up</button>
+        <p>Already have an account? <a href="#" onclick="toggleForms()">Login</a></p>
+    </div>
+
+    <div id="login" class="container hidden">
+        <h2>Login</h2>
+        <form class="login-form">
+            <input type="text" id="username" placeholder="Username">
+            <div class="password-container">
+                <input type="password" id="password" placeholder="Password">
+                <button onclick="togglePasswordVisibility('password')">👁</button>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+        <p>Don't have an account? <a href="#" onclick="toggleForms()">Sign Up</a></p>
+    </div>
+
+    <div id="welcome" class="container hidden welcome-container">
+        <h1 class="welcome-message">Welcome!</h1>
+        <p>Your security is our priority</p>
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div id="encryption" class="container hidden">
+        <h2>Encryption Tool</h2>
+        <button onclick="showSection('aes')">AES Encryption</button>
+        <button onclick="showSection('des')">DES Encryption</button>
+        
+        <div id="aesSection" class="hidden">
+            <h3>AES Encryption</h3>
+            <input type="password" id="aesPassphrase" placeholder="Enter passphrase">
+            <textarea id="aesMessage" placeholder="Enter message"></textarea>
+            <button onclick="aesEncrypt()">Encrypt</button>
+            <div id="aesResult"></div>
+            <button onclick="copyToClipboard('aesResult')">Copy</button>
+            <textarea id="aesEncryptedInput" placeholder="Enter encrypted message"></textarea>
+            <button onclick="aesDecrypt()">Decrypt</button>
+            <div id="aesDecrypted"></div>
+        </div>
+
+        <div id="desSection" class="hidden">
+            <h3>DES Encryption</h3>
+            <input type="password" id="desPassphrase" placeholder="Enter passphrase">
+            <textarea id="desMessage" placeholder="Enter message"></textarea>
+            <button onclick="desEncrypt()">Encrypt</button>
+            <div id="desResult"></div>
+            <button onclick="copyToClipboard('desResult')">Copy</button>
+            <textarea id="desEncryptedInput" placeholder="Enter encrypted message"></textarea>
+            <button onclick="desDecrypt()">Decrypt</button>
+            <div id="desDecrypted"></div>
+        </div>
+    </div>
+
+    <script>
+        // Snowfall Animation
+        function snowfall() {
+            const canvas = document.getElementById('snowCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            let snowflakes = Array.from({ length: 150 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                radius: Math.random() * 4 + 1,
+                speed: Math.random() * 3 + 1,
+                opacity: Math.random() * 0.5 + 0.5
+            }));
+
+            function drawSnow() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                snowflakes.forEach(flake => {
+                    ctx.beginPath();
+                    ctx.arc(flake.x, flake.y, flake.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    flake.y += flake.speed;
+                    flake.x += Math.sin(flake.y * 0.01) * 1;
+                    
+                    if (flake.y > canvas.height) {
+                        flake.y = -10;
+                        flake.x = Math.random() * canvas.width;
+                    }
+                });
+                requestAnimationFrame(drawSnow);
+            }
+
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+
+            drawSnow();
+        }
+        snowfall();
+
+        // User Authentication
+        let inactivityTimer;
+        const inactivityDuration = 300000;
+
+        function toggleForms() {
+            document.getElementById('signup').classList.toggle('hidden');
+            document.getElementById('login').classList.toggle('hidden');
+        }
+
+        function createAccount() {
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            if (checkPasswordStrength(password)) {
+                localStorage.setItem('username', username);
+                localStorage.setItem('password', password);
+                alert('Account created! Please login.');
+                toggleForms();
+            } else {
+                alert('Password must be at least 8 characters with a number and special character');
+            }
+        }
+
+        function checkPasswordStrength(password) {
+            const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+            return strongRegex.test(password);
+        }
+
+        document.querySelector('.login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === localStorage.getItem('username') && password === localStorage.getItem('password')) {
+                document.getElementById('login').classList.add('hidden');
+                document.getElementById('welcome').classList.remove('hidden');
+                
+                setTimeout(() => {
+                    document.getElementById('welcome').classList.add('hidden');
+                    document.getElementById('encryption').classList.remove('hidden');
+                    document.getElementById('topNav').classList.remove('hidden');
+                }, 3000);
+            } else {
+                alert('Invalid credentials');
+                document.getElementById('login').style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    document.getElementById('login').style.animation = '';
+                }, 500);
+            }
+        });
+
+        // Encryption Functions
+        function showSection(section) {
+            document.querySelectorAll('#encryption > div').forEach(div => {
+                div.classList.add('hidden');
+            });
+            document.getElementById(`${section}Section`).classList.remove('hidden');
+        }
+
+        function aesEncrypt() {
+            showLoading('aesResult');
+            setTimeout(() => {
+                const passphrase = document.getElementById('aesPassphrase').value;
+                const message = document.getElementById('aesMessage').value;
+                const encrypted = CryptoJS.AES.encrypt(message, passphrase).toString();
+                document.getElementById('aesResult').innerHTML = encrypted;
+            }, 500);
+        }
+
+        function aesDecrypt() {
+            showLoading('aesDecrypted');
+            setTimeout(() => {
+                const passphrase = document.getElementById('aesPassphrase').value;
+                const encryptedMessage = document.getElementById('aesEncryptedInput').value;
+                try {
+                    const decrypted = CryptoJS.AES.decrypt(encryptedMessage, passphrase).toString(CryptoJS.enc.Utf8);
+                    document.getElementById('aesDecrypted').innerHTML = decrypted || 'Decryption failed';
+                } catch (e) {
+                    document.getElementById('aesDecrypted').innerHTML = 'Decryption failed';
+                }
+            }, 500);
+        }
+
+        function desEncrypt() {
+            showLoading('desResult');
+            setTimeout(() => {
+                const passphrase = document.getElementById('desPassphrase').value;
+                const message = document.getElementById('desMessage').value;
+                const encrypted = CryptoJS.DES.encrypt(message, passphrase).toString();
+                document.getElementById('desResult').innerHTML = encrypted;
+            }, 500);
+        }
+
+        function desDecrypt() {
+            showLoading('desDecrypted');
+            setTimeout(() => {
+                const passphrase = document.getElementById('desPassphrase').value;
+                const encryptedMessage = document.getElementById('desEncryptedInput').value;
+                try {
+                    const decrypted = CryptoJS.DES.decrypt(encryptedMessage, passphrase).toString(CryptoJS.enc.Utf8);
+                    document.getElementById('desDecrypted').innerHTML = decrypted || 'Decryption failed';
+                } catch (e) {
+                    document.getElementById('desDecrypted').innerHTML = 'Decryption failed';
+                }
+            }, 500);
+        }
+
+        // Utility Functions
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading-spinner"></div>';
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function logout() {
+            document.getElementById('encryption').classList.add('hidden');
+            document.getElementById('topNav').classList.add('hidden');
+            document.getElementById('login').classList.remove('hidden');
+        }
+
+        // Inactivity Timer
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logout, inactivityDuration);
+        }
+
+        document.addEventListener('mousemove', resetInactivityTimer);
+        document.addEventListener('keypress', resetInactivityTimer);
+        resetInactivityTimer();
+    </script>
+</body>
+</html>
